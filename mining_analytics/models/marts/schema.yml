@@ -1,0 +1,111 @@
+version: 2
+
+models:
+  # ==========================================
+  # STOCK PERFORMANCE
+  # ==========================================
+
+  - name: mart_stock_performance
+    description: "Latest performance indicators for Indonesian mining stocks"
+
+    columns:
+      - name: symbol
+        description: "IDX stock ticker"
+        data_tests:
+          - not_null
+          - unique
+
+      - name: trading_date
+        data_tests:
+          - not_null
+
+      - name: close_price
+        data_tests:
+          - not_null
+          - positive_values
+
+      - name: daily_return_pct
+        data_tests:
+          - not_null
+
+      - name: sma_20
+        data_tests:
+          - not_null
+
+      - name: sma_50
+        data_tests:
+          - not_null
+
+  # ==========================================
+  # COMMODITY PERFORMANCE
+  # ==========================================
+
+  - name: mart_commodity_performance
+    description: "Latest technical performance of tracked global commodities"
+
+    columns:
+      - name: symbol
+        description: "Commodity identifier"
+        data_tests:
+          - not_null
+          - unique
+
+      - name: trading_date
+        data_tests:
+          - not_null
+
+      - name: close_price
+        data_tests:
+          - not_null
+          - positive_values
+
+      - name: daily_return_pct
+        data_tests:
+          - not_null
+
+      - name: sma_20
+        data_tests:
+          - not_null
+
+      - name: sma_50
+        data_tests:
+          - not_null
+
+      - name: trend_signal
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Bullish", "Bearish", "Neutral"]
+
+  - name: mart_world_bank_commodity_performance
+    description: "Latest monthly performance of Nickel and Australian Coal based on World Bank Pink Sheet data"
+    columns:
+      - name: symbol
+        data_tests:
+          - not_null
+          - unique
+
+      - name: trading_date
+        data_tests:
+          - not_null
+
+      - name: close_price
+        data_tests:
+          - not_null
+          - positive_values
+
+      - name: monthly_return_pct
+        data_tests:
+          - not_null
+
+      - name: trend_signal
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Bullish", "Bearish", "Neutral"]
+
+      - name: monthly_return_rank
+        data_tests:
+          - not_null

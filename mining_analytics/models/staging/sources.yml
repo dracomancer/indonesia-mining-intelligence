@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: mining
+    description: "Raw Indonesian mining and global commodity market data"
+    database: mining_market
+    schema: public
+    tables:
+      - name: stock_prices
+        description: "Historical daily stock prices from Yahoo Finance"
+
+      - name: commodity_prices
+        description: "Historical commodity futures prices from Yahoo Finance"
+
+      - name: world_bank_commodity_prices
+        description: "Historical monthly Nickel and Australian Coal prices from World Bank Pink Sheet"

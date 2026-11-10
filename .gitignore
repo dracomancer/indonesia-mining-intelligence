@@ -30,3 +30,20 @@ scripts/build_checkpoint_slides.py
 docs/*prompt*
 docs/*narasi*
 docs/*presentation*
+
+
+# Nested project-specific exclusions
+**/dashboard/data.js
+**/dashboard/market_risk.csv
+
+# Internal documentation and presentation files
+**/docs/*.xlsx
+**/docs/*prompt*
+**/docs/*narasi*
+**/docs/*presentation*
+**/docs/guideline_readiness.md
+**/docs/project_history.md
+**/docs/panduan_demo_project.txt
+**/docs/final_project_checkpoint.pptx
+# Local backup files
+README_original.md

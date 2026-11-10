@@ -1,0 +1,46 @@
+market:
+  country: Indonesia
+  exchange: IDX
+  currency: IDR
+  timezone: Asia/Jakarta
+
+stocks:
+  - symbol: ADRO.JK
+    company: Alamtri Resources Indonesia
+    sector: Coal
+
+  - symbol: PTBA.JK
+    company: Bukit Asam
+    sector: Coal
+
+  - symbol: ITMG.JK
+    company: Indo Tambangraya Megah
+    sector: Coal
+
+  - symbol: ANTM.JK
+    company: Aneka Tambang
+    sector: Nickel and Gold
+
+  - symbol: INCO.JK
+    company: Vale Indonesia
+    sector: Nickel
+
+  - symbol: NCKL.JK
+    company: Trimegah Bangun Persada
+    sector: Nickel
+
+  - symbol: MDKA.JK
+    company: Merdeka Copper Gold
+    sector: Gold and Copper
+
+  - symbol: BRMS.JK
+    company: Bumi Resources Minerals
+    sector: Gold and Copper
+
+  - symbol: AMMN.JK
+    company: Amman Mineral Internasional
+    sector: Copper and Gold
+
+  - symbol: MEDC.JK
+    company: Medco Energi Internasional
+    sector: Oil and Gas

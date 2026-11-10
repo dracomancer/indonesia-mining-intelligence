@@ -1,0 +1,40 @@
+commodities:
+  - symbol: GOLD
+    name: Gold
+    category: Precious Metals
+    unit: USD/troy ounce
+    yahoo_ticker: GC=F
+    source: Yahoo Finance
+    frequency: Daily
+
+  - symbol: COPPER
+    name: Copper
+    category: Industrial Metals
+    unit: USD/pound
+    yahoo_ticker: HG=F
+    source: Yahoo Finance
+    frequency: Daily
+
+  - symbol: BRENT
+    name: Brent Crude Oil
+    category: Energy
+    unit: USD/barrel
+    yahoo_ticker: BZ=F
+    source: Yahoo Finance
+    frequency: Daily
+
+  - symbol: NICKEL
+    name: Nickel
+    category: Industrial Metals
+    unit: USD/metric ton
+    yahoo_ticker: null
+    source: World Bank
+    frequency: Monthly
+
+  - symbol: COAL
+    name: Newcastle Coal
+    category: Energy
+    unit: USD/metric ton
+    yahoo_ticker: null
+    source: World Bank
+    frequency: Monthly

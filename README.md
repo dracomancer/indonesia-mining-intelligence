@@ -1,137 +1,359 @@
-# Financial Market & IDR Exposure Monitoring
 
-Portofolio Data Engineering, Daud Fernando, Purwadhika JCDEAH-009.
+# Indonesia Mining Intelligence
 
-Pipeline menggabungkan histori empat saham finansial AS dengan kurs BI JISDOR untuk memantau nilai indikatif dalam rupiah. Pengguna analitik dapat membandingkan saham, melihat pengaruh harga dan kurs, serta menelusuri asal angka di dashboard.
+**A Financial Market Data Engineering & Analytics Platform**
 
-## Cakupan data
+Indonesia Mining Intelligence is a data engineering and analytics project designed to monitor Indonesian mining-related equities and global commodity markets.
 
-| Data | Sumber dan grain | Kegunaan |
+The platform integrates historical stock market data and international commodity benchmarks into a centralized analytical database. It transforms raw financial data into structured indicators and interactive visualizations to support financial market monitoring and research.
+
+The project explores how commodity price movements can provide additional context for understanding Indonesia's mining sector.
+
+---
+
+## Project Objectives
+
+The project aims to:
+
+- Build an end-to-end financial market data pipeline.
+- Integrate Indonesian mining equities with global commodity benchmarks.
+- Develop structured financial datasets for analytical consumption.
+- Calculate historical performance and market indicators.
+- Provide an interactive dashboard for market monitoring.
+- Establish a foundation for cross-market and macroeconomic analysis.
+
+---
+
+## Key Features
+
+### 1. Indonesian Mining Equity Monitoring
+
+Historical stock price data from selected Indonesian mining and energy-related companies.
+
+Selected companies:
+
+| Ticker | Company | Sector |
 |---|---|---|
-| Kurs USD/IDR | BI JISDOR, tanggal dan mata uang | Konversi nilai ke rupiah |
-| JPM, BAC, GS, MS | Yahoo Finance melalui yfinance, bar satu menit | Histori harga dan perbandingan saham |
-| Referensi saham | Daftar manual empat emiten, satu baris per symbol | Nama perusahaan dan mata uang |
-| Mart analitik | Harga, kurs dan dimensi saham | Nilai per saham, return dan sinyal simulasi |
+| ADRO.JK | Alamtri Resources Indonesia | Coal |
+| PTBA.JK | Bukit Asam | Coal |
+| ITMG.JK | Indo Tambangraya Megah | Coal |
+| ANTM.JK | Aneka Tambang | Nickel & Gold |
+| INCO.JK | Vale Indonesia | Nickel |
+| NCKL.JK | Trimegah Bangun Persada | Nickel |
+| MDKA.JK | Merdeka Copper Gold | Gold & Copper |
+| BRMS.JK | Bumi Resources Minerals | Gold & Copper |
+| AMMN.JK | Amman Mineral Internasional | Copper & Gold |
+| MEDC.JK | Medco Energi Internasional | Oil & Gas |
 
-Harga menggunakan histori asli yang dikirim ulang melalui Kafka. Ini bukan feed harga live. Quantity satu saham; sinyal SMA3/SMA8 adalah simulasi aturan, bukan hasil backtest atau rekomendasi investasi. Ketersediaan tanggal mengikuti sumber, termasuk akhir pekan dan hari libur.
+### 2. Global Commodity Intelligence
 
-## Alur
+The platform integrates five commodity instruments from two data providers.
 
-```mermaid
-flowchart LR
-  BI[BI JISDOR] --> B[Airflow atau manual, YAML yang sama]
-  B --> G[GCS raw]
-  G --> S[Spark]
-  S --> P[GCS processed]
-  P --> FX[BigQuery fact_jisdor_daily]
-  Y[Yahoo histori] --> K[Python producer, Kafka, consumer]
-  K --> R[GCS raw dan valid]
-  R --> ST[BigQuery snapshot saham]
-  K --> E[GCS raw per event, BigQuery tabel demo]
-  FX --> D[dbt]
-  ST --> D
-  DIM[dim_saham] --> D
-  D --> M[Mart monitoring dan latest]
-  M --> L[Looker atau dashboard HTML]
-  B -. gagal .-> MAIL[Mailpit lokal]
-```
+| Commodity | Data Source | Frequency |
+|---|---|---|
+| Gold | Yahoo Finance | Daily |
+| Copper | Yahoo Finance | Daily |
+| Brent Crude Oil | Yahoo Finance | Daily |
+| Nickel | World Bank Pink Sheet | Monthly |
+| Australian Coal | World Bank Pink Sheet | Monthly |
 
-Replay snapshot memuat GCS setelah seluruh pesan selesai, lalu dbt membangun mart. Demo per event melakukan streaming insert ke tabel terpisah; tabel tersebut tidak otomatis memperbarui mart dashboard.
+The combination of daily and monthly observations supports both short-term market monitoring and long-term commodity trend analysis.
 
-![Arsitektur pipeline](docs/arsitektur_project_icons.png)
+### 3. Financial Market Indicators
 
-## Struktur
+The analytical pipeline calculates:
+
+- Daily and monthly returns.
+- Simple Moving Averages.
+- Rolling historical volatility.
+- Intraday price range.
+- Historical price highs and lows.
+- Rule-based trend classification.
+- Historical performance comparisons.
+
+### 4. Interactive Dashboard
+
+The Streamlit dashboard currently provides five main sections:
+
+1. Market Overview
+2. Equity Analysis
+3. Stock Performance Comparison
+4. Commodity Intelligence
+5. Pipeline Information
+
+---
+
+## Data Architecture
+
+The project follows a layered data engineering workflow.
 
 ```text
-jalankan.py                     satu entry point command
-config/pipeline_kurs.yaml        task ID, parameter, dependensi dan jadwal
-operator_pipeline/              operator Airflow, eksekusi, koneksi, GCS, BigQuery, alert
-scripts/
-  ekstraksi/                    ambil kurs dan histori saham
-  transformasi/                 bersihkan kurs dengan Spark
-  pemuatan/                     simpan sumber dan muat warehouse
-  streaming/                    kontrak event, producer, consumer dan replay
-  pipeline/                     orkestrasi persiapan dan replay lengkap
-  validasi/                     rekonsiliasi, cakupan tanggal dan mart
-  persiapan/                    konfigurasi lokal dan bucket
-  laporan/                      ekspor dashboard, Excel dan dbt Docs
-analytics/models/               silver, dimensi, gold dan pengujian dbt
-airflow/                        DAG dan image Spark
+External Data Sources
+        |
+        v
+Python Data Ingestion
+        |
+        v
+Raw Data Storage (Parquet)
+        |
+        v
+Data Processing
+        |
+        v
+PostgreSQL Data Warehouse
+        |
+        v
+dbt Transformation
+        |
+        v
+Analytical Data Models
+        |
+        v
+Streamlit Dashboard
 ```
 
-Semua task kurs menggunakan `OperatorKurs`; fungsi bisnis tidak ditulis ulang di DAG. Nama model BigQuery dipertahankan agar koneksi dashboard tetap kompatibel.
+### Technology Stack
 
-## Setup, Windows PowerShell
-
-Prasyarat: Python 3.11 atau lebih baru, Docker Desktop dengan Linux containers, Google Cloud CLI dan akses GCS/BigQuery pada project yang dikonfigurasi. Spark dijalankan dalam container Airflow. Resource cloud memakai `jcdeah-009`, region `asia-southeast2`; repository publik tidak memberikan izin mengakses project tersebut.
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-gcloud auth application-default login
-.\.venv\Scripts\python.exe jalankan.py siapkan-airflow
-docker compose --env-file .env.airflow -f compose.yaml -f compose.streaming.yaml -f compose.analytics.yaml --profile streaming --profile analytics build airflow market dbt
-docker compose --env-file .env.airflow -f compose.yaml -f compose.streaming.yaml -f compose.analytics.yaml --profile streaming --profile analytics up -d --wait airflow kafka
-```
-
-Jika bucket belum tersedia, buat dengan `jalankan.py siapkan-bucket --project jcdeah-009 --bucket jcdeah-009-daud-finalproject --use-local-adc`. Periksa izin dan konfigurasi sebelum menggunakan project milik sendiri. `.env.airflow` dan credential dibuat/disimpan lokal, bukan di Git.
-
-## Menjalankan pipeline
-
-| Tujuan | Command PowerShell |
+| Component | Technology |
 |---|---|
-| Perbarui sumber sampai mart | `.\.venv\Scripts\python.exe jalankan.py siapkan-data` |
-| Hanya perbarui arsip saham | `.\.venv\Scripts\python.exe jalankan.py ambil-saham --activate` |
-| Replay lengkap sampai mart | `.\.venv\Scripts\python.exe jalankan.py replay-lengkap` |
-| Batch manual di container Spark | `docker compose --env-file .env.airflow -f compose.yaml exec -T airflow python jalankan.py batch` |
-| Baca tiga pesan Kafka | `.\.venv\Scripts\python.exe jalankan.py lihat-kafka` |
-| Audit mart | `.\.venv\Scripts\python.exe jalankan.py periksa-mart --use-local-adc` |
-| Dokumentasi lineage | `.\.venv\Scripts\python.exe jalankan.py lihat-lineage --refresh` |
+| Programming Language | Python |
+| Data Collection | yfinance, Requests, Pandas |
+| Data Processing | Pandas, NumPy |
+| Storage Format | Parquet |
+| Database | PostgreSQL |
+| Data Transformation | dbt |
+| Dashboard | Streamlit |
+| Visualization | Plotly |
+| Version Control | Git & GitHub |
 
-Jalankan satu persiapan pada satu waktu. `siapkan-data` mengambil sumber, menunggu DAG batch sukses, lalu menjalankan replay dan dbt. Pipeline berhenti jika tahap wajib gagal.
+---
 
-Replay per event, setelah setup data awal selesai:
+## Data Warehouse Design
 
-```powershell
-docker compose --env-file .env.airflow -f compose.yaml -f compose.streaming.yaml --profile streaming run --rm market /workspace/jalankan.py replay-event --limit 40 --interval 2
+The database separates source datasets and analytical models.
+
+### Source Tables
+
+| Schema | Table | Description |
+|---|---|---|
+| public | stock_prices | Historical Indonesian equity prices |
+| public | commodity_prices | Daily commodity futures observations |
+| public | world_bank_commodity_prices | Monthly World Bank commodity prices |
+
+### Analytical Models
+
+The dbt project uses staging, intermediate, and mart layers.
+
+**Staging**
+- `stg_stock_prices`
+- `stg_commodity_prices`
+- `stg_world_bank_commodity_prices`
+
+**Intermediate**
+- `int_stock_indicators`
+- `int_commodity_indicators`
+- `int_world_bank_commodity_indicators`
+
+**Marts**
+- `mart_stock_performance`
+- `mart_stock_history`
+- `mart_historical_performance`
+- `mart_commodity_performance`
+- `mart_world_bank_commodity_performance`
+
+---
+
+## Data Coverage
+
+Current validated datasets:
+
+| Dataset | Records | Frequency |
+|---|---:|---|
+| Indonesian Mining Equities | 8,974 | Daily |
+| Yahoo Finance Commodities | 2,910 | Daily |
+| World Bank Commodities | 1,604 | Monthly |
+
+**Coverage period:**
+
+- Equity data: January 2023 – November 2026.
+- Yahoo Finance commodities: January 2023 – November 2026.
+- World Bank commodities: January 1960 – October 2026.
+
+Record counts represent the current collected datasets and may change as new observations are ingested.
+
+---
+
+## Data Quality & Validation
+
+The project includes dedicated data quality checks covering:
+
+- Missing observations.
+- Duplicate records.
+- Date consistency.
+- Historical coverage.
+- Indicator calculation accuracy.
+
+The current commodity validation identified no duplicate observations or future-dated records.
+
+All tested commodity indicators produced zero calculation mismatches within a numerical tolerance of 0.000001.
+
+Missing historical observations are retained as NULL when source data is unavailable.
+
+For detailed results, see:
+
+- [Data Quality Report](indonesia_mining/docs/data_quality_report.md)
+- [Data Dictionary](indonesia_mining/docs/data_dictionary.md)
+- [Methodology](indonesia_mining/docs/methodology.md)
+- [Data Sources](indonesia_mining/docs/data_sources.md)
+
+---
+
+## Repository Structure
+
+```text
+financial-market-idr-monitoring/
+|
+|-- indonesia_mining/
+|   |-- config/
+|   |-- data/
+|   |   |-- raw/
+|   |   |-- processed/
+|   |   |-- warehouse/
+|   |   |-- manifests/
+|   |
+|   |-- dashboard/
+|   |   |-- app.py
+|   |
+|   |-- src/
+|   |   |-- ingestion/
+|   |   |-- processing/
+|   |   |-- database/
+|   |   |-- analytics/
+|   |   |-- streaming/
+|   |
+|   |-- docs/
+|   |-- notebooks/
+|   |-- tests/
+|   |-- requirements.txt
+|
+|-- mining_analytics/
+|   |-- models/
+|   |   |-- staging/
+|   |   |-- intermediate/
+|   |   |-- marts/
+|   |-- dbt_project.yml
+|
+|-- .gitignore
+|-- README.md
 ```
 
-Transformasi manual satu run memakai fungsi yang sama dengan task Airflow:
+---
 
-```powershell
-docker compose --env-file .env.airflow -f compose.yaml exec -T airflow python jalankan.py batch --task transform_spark --run-id SOURCE_RUN_ID
+## Getting Started
+
+### Prerequisites
+
+- Python 3.13
+- PostgreSQL 16
+- Git
+- dbt
+- Streamlit
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/financial-market-idr-monitoring.git
+cd financial-market-idr-monitoring
 ```
 
-SOURCE_RUN_ID harus berasal dari pengambilan yang valid dan raw GCS sudah diunggah. Mode otomatis: DAG `jisdor_daily`, pukul 18.00 WIB selama container aktif dan DAG tidak paused. Cara menguji alert terdapat pada dokumentasi batch.
+### 2. Create a Virtual Environment
 
-## Dokumentasi
-
-- [Standar modul, error dan pengembangan](docs/standar_pengembangan.md)
-- [Batch manual dan otomatis](docs/bigquery_batch.md)
-- [Streaming dan bukti ingestion per event](docs/streaming_ingestion.md)
-- [Medallion, grain dan lineage](docs/medallion_bronze_silver_gold.md)
-- [Transformasi dan penggunaan mart](docs/demo_analytics.md)
-- [Definisi sinyal](docs/stock_signals.md)
-
-## Pengujian
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\.venv\Scripts\python.exe -m ruff check .
-docker compose --env-file .env.airflow -f compose.yaml exec -T airflow python -m unittest discover -s tests -p test_spark_batch.py -v
-docker compose --env-file .env.airflow -f compose.yaml -f compose.analytics.yaml --profile analytics run --rm dbt build
+```bash
+python -m venv .venv
 ```
 
-Unit test lokal tidak memerlukan credential cloud. Test Spark berjalan di container; dbt build memerlukan akses BigQuery. Validasi meliputi kontrak event, hash raw, deduplikasi, jumlah load, kegagalan sink, rekonsiliasi dan penghentian task lanjutan saat error.
+Activate the environment.
 
-## Akses hasil
+Windows PowerShell:
 
-- [Airflow](http://localhost:8085), [Mailpit](http://localhost:8025), [dbt Docs](http://localhost:8086).
-- [BigQuery](https://console.cloud.google.com/bigquery?project=jcdeah-009), dataset `daud_finalproject` dan `daud_finalproject_demo`.
-- Dashboard HTML: `dashboard/index.html`, data dibuat ulang melalui pipeline.
-- Looker: hubungkan `mart_stock_monitoring` untuk histori dan `mart_stock_latest` untuk status terakhir. URL report belum disertakan.
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
 
-Credential, data lokal, hasil ekspor dan catatan presentasi tidak dipublikasikan. PostgreSQL adalah metadata Airflow; ingestion tabel bisnis PostgreSQL dan scraping HTML tidak termasuk implementasi saat ini. Dataflow tidak digunakan. Histori menit Yahoo memiliki batas ketersediaan; arsip lokal diperlukan untuk replay tanggal lama. Publikasi kode tidak memindahkan hak data pihak ketiga.
+### 3. Install Dependencies
 
-Sumber: [BI JISDOR](https://www.bi.go.id/biwebservice/wskursbi.asmx?op=getSubKursJisdor3), [Yahoo Finance](https://finance.yahoo.com/), [yfinance](https://ranaroussi.github.io/yfinance/).
+```bash
+pip install -r indonesia_mining/requirements.txt
+```
+
+### 4. Configure Environment Variables
+
+Create an `.env` file inside the `indonesia_mining` directory.
+
+Configure the following variables according to your local PostgreSQL setup:
+
+```env
+DB_USER=your_database_user
+DB_PASSWORD=your_database_password
+DB_HOST=localhost
+DB_PORT=5433
+DB_NAME=mining_market
+```
+
+Never commit your actual database credentials to GitHub.
+
+### 5. Run the Dashboard
+
+From the repository root:
+
+```bash
+streamlit run indonesia_mining/dashboard/app.py
+```
+
+The dashboard will be available at:
+
+```text
+http://localhost:8501
+```
+
+Additional ingestion and transformation instructions will be documented as the project setup is finalized.
+
+---
+
+## Methodological Limitations
+
+- Yahoo Finance futures prices may differ from spot commodity prices.
+- World Bank Pink Sheet data is monthly rather than daily.
+- Australian Coal is used as a global benchmark proxy, not an Indonesian domestic coal price.
+- Historical volatility and moving averages are descriptive indicators, not standalone forecasting tools.
+- Mathematical validation confirms calculation consistency, not independent source accuracy.
+- Commodity and equity observations come from different markets and calendars.
+
+---
+
+## Roadmap
+
+| Feature | Status |
+|---|---|
+| Indonesian mining equity ingestion | Implemented |
+| Yahoo Finance commodity ingestion | Implemented |
+| World Bank commodity ingestion | Implemented |
+| PostgreSQL data warehouse | Implemented |
+| dbt analytical models | Implemented |
+| Streamlit dashboard | Implemented |
+| Commodity data quality validation | Implemented |
+| USD/IDR JISDOR integration | Planned |
+| Commodity-equity correlation analysis | Planned |
+| Rolling correlation analysis | Planned |
+| Macroeconomic data integration | Planned |
+| Automated pipeline orchestration | Planned |
+
+---
+
+## Disclaimer
+
+This project is developed for educational, analytical, and portfolio purposes.
+
+It does not provide investment advice, trading signals, or guaranteed market forecasts.
+
+All market observations are subject to the availability, methodology, and limitations of their original data providers.
