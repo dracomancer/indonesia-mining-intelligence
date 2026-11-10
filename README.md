@@ -1,4 +1,3 @@
-
 # Indonesia Mining Intelligence
 
 **A Financial Market Data Engineering & Analytics Platform**
@@ -32,30 +31,30 @@ Historical stock price data from selected Indonesian mining and energy-related c
 
 Selected companies:
 
-| Ticker | Company | Sector |
-|---|---|---|
-| ADRO.JK | Alamtri Resources Indonesia | Coal |
-| PTBA.JK | Bukit Asam | Coal |
-| ITMG.JK | Indo Tambangraya Megah | Coal |
-| ANTM.JK | Aneka Tambang | Nickel & Gold |
-| INCO.JK | Vale Indonesia | Nickel |
-| NCKL.JK | Trimegah Bangun Persada | Nickel |
-| MDKA.JK | Merdeka Copper Gold | Gold & Copper |
-| BRMS.JK | Bumi Resources Minerals | Gold & Copper |
+| Ticker  | Company                     | Sector        |
+| ------- | --------------------------- | ------------- |
+| ADRO.JK | Alamtri Resources Indonesia | Coal          |
+| PTBA.JK | Bukit Asam                  | Coal          |
+| ITMG.JK | Indo Tambangraya Megah      | Coal          |
+| ANTM.JK | Aneka Tambang               | Nickel & Gold |
+| INCO.JK | Vale Indonesia              | Nickel        |
+| NCKL.JK | Trimegah Bangun Persada     | Nickel        |
+| MDKA.JK | Merdeka Copper Gold         | Gold & Copper |
+| BRMS.JK | Bumi Resources Minerals     | Gold & Copper |
 | AMMN.JK | Amman Mineral Internasional | Copper & Gold |
-| MEDC.JK | Medco Energi Internasional | Oil & Gas |
+| MEDC.JK | Medco Energi Internasional  | Oil & Gas     |
 
 ### 2. Global Commodity Intelligence
 
 The platform integrates five commodity instruments from two data providers.
 
-| Commodity | Data Source | Frequency |
-|---|---|---|
-| Gold | Yahoo Finance | Daily |
-| Copper | Yahoo Finance | Daily |
-| Brent Crude Oil | Yahoo Finance | Daily |
-| Nickel | World Bank Pink Sheet | Monthly |
-| Australian Coal | World Bank Pink Sheet | Monthly |
+| Commodity       | Data Source           | Frequency |
+| --------------- | --------------------- | --------- |
+| Gold            | Yahoo Finance         | Daily     |
+| Copper          | Yahoo Finance         | Daily     |
+| Brent Crude Oil | Yahoo Finance         | Daily     |
+| Nickel          | World Bank Pink Sheet | Monthly   |
+| Australian Coal | World Bank Pink Sheet | Monthly   |
 
 The combination of daily and monthly observations supports both short-term market monitoring and long-term commodity trend analysis.
 
@@ -114,17 +113,17 @@ Streamlit Dashboard
 
 ### Technology Stack
 
-| Component | Technology |
-|---|---|
-| Programming Language | Python |
-| Data Collection | yfinance, Requests, Pandas |
-| Data Processing | Pandas, NumPy |
-| Storage Format | Parquet |
-| Database | PostgreSQL |
-| Data Transformation | dbt |
-| Dashboard | Streamlit |
-| Visualization | Plotly |
-| Version Control | Git & GitHub |
+| Component            | Technology                 |
+| -------------------- | -------------------------- |
+| Programming Language | Python                     |
+| Data Collection      | yfinance, Requests, Pandas |
+| Data Processing      | Pandas, NumPy              |
+| Storage Format       | Parquet                    |
+| Database             | PostgreSQL                 |
+| Data Transformation  | dbt                        |
+| Dashboard            | Streamlit                  |
+| Visualization        | Plotly                     |
+| Version Control      | Git & GitHub               |
 
 ---
 
@@ -134,27 +133,30 @@ The database separates source datasets and analytical models.
 
 ### Source Tables
 
-| Schema | Table | Description |
-|---|---|---|
-| public | stock_prices | Historical Indonesian equity prices |
-| public | commodity_prices | Daily commodity futures observations |
-| public | world_bank_commodity_prices | Monthly World Bank commodity prices |
+| Schema | Table                       | Description                          |
+| ------ | --------------------------- | ------------------------------------ |
+| public | stock_prices                | Historical Indonesian equity prices  |
+| public | commodity_prices            | Daily commodity futures observations |
+| public | world_bank_commodity_prices | Monthly World Bank commodity prices  |
 
 ### Analytical Models
 
 The dbt project uses staging, intermediate, and mart layers.
 
 **Staging**
+
 - `stg_stock_prices`
 - `stg_commodity_prices`
 - `stg_world_bank_commodity_prices`
 
 **Intermediate**
+
 - `int_stock_indicators`
 - `int_commodity_indicators`
 - `int_world_bank_commodity_indicators`
 
 **Marts**
+
 - `mart_stock_performance`
 - `mart_stock_history`
 - `mart_historical_performance`
@@ -167,11 +169,11 @@ The dbt project uses staging, intermediate, and mart layers.
 
 Current validated datasets:
 
-| Dataset | Records | Frequency |
-|---|---:|---|
-| Indonesian Mining Equities | 8,974 | Daily |
-| Yahoo Finance Commodities | 2,910 | Daily |
-| World Bank Commodities | 1,604 | Monthly |
+| Dataset                    | Records | Frequency |
+| -------------------------- | ------: | --------- |
+| Indonesian Mining Equities |   8,974 | Daily     |
+| Yahoo Finance Commodities  |   2,910 | Daily     |
+| World Bank Commodities     |   1,604 | Monthly   |
 
 **Coverage period:**
 
@@ -211,6 +213,7 @@ For detailed results, see:
 ## Repository Structure
 
 ```text
+
 financial-market-idr-monitoring/
 |
 |-- indonesia_mining/
@@ -219,21 +222,15 @@ financial-market-idr-monitoring/
 |   |   |-- raw/
 |   |   |-- processed/
 |   |   |-- warehouse/
-|   |   |-- manifests/
-|   |
 |   |-- dashboard/
 |   |   |-- app.py
-|   |
+|   |-- docs/
 |   |-- src/
 |   |   |-- ingestion/
 |   |   |-- processing/
 |   |   |-- database/
-|   |   |-- analytics/
-|   |   |-- streaming/
-|   |
-|   |-- docs/
-|   |-- notebooks/
 |   |-- tests/
+|   |-- notebooks/
 |   |-- requirements.txt
 |
 |-- mining_analytics/
@@ -241,8 +238,12 @@ financial-market-idr-monitoring/
 |   |   |-- staging/
 |   |   |-- intermediate/
 |   |   |-- marts/
+|   |-- tests/
 |   |-- dbt_project.yml
 |
+|-- check_commodity_db.py
+|-- check_data_quality.py
+|-- check_indicator_validation.py
 |-- .gitignore
 |-- README.md
 ```
@@ -333,20 +334,20 @@ Additional ingestion and transformation instructions will be documented as the p
 
 ## Roadmap
 
-| Feature | Status |
-|---|---|
-| Indonesian mining equity ingestion | Implemented |
-| Yahoo Finance commodity ingestion | Implemented |
-| World Bank commodity ingestion | Implemented |
-| PostgreSQL data warehouse | Implemented |
-| dbt analytical models | Implemented |
-| Streamlit dashboard | Implemented |
-| Commodity data quality validation | Implemented |
-| USD/IDR JISDOR integration | Planned |
-| Commodity-equity correlation analysis | Planned |
-| Rolling correlation analysis | Planned |
-| Macroeconomic data integration | Planned |
-| Automated pipeline orchestration | Planned |
+| Feature                               | Status      |
+| ------------------------------------- | ----------- |
+| Indonesian mining equity ingestion    | Implemented |
+| Yahoo Finance commodity ingestion     | Implemented |
+| World Bank commodity ingestion        | Implemented |
+| PostgreSQL data warehouse             | Implemented |
+| dbt analytical models                 | Implemented |
+| Streamlit dashboard                   | Implemented |
+| Commodity data quality validation     | Implemented |
+| USD/IDR JISDOR integration            | Planned     |
+| Commodity-equity correlation analysis | Planned     |
+| Rolling correlation analysis          | Planned     |
+| Macroeconomic data integration        | Planned     |
+| Automated pipeline orchestration      | Planned     |
 
 ---
 
