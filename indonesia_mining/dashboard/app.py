@@ -385,11 +385,18 @@ st.markdown("""
 
 @st.cache_resource
 
+
 def get_engine():
     database_url = os.getenv("DATABASE_URL")
 
+    # Read Streamlit Cloud Secrets if environment variable is absent
+    if not database_url:
+        try:
+            database_url = st.secrets.get("DATABASE_URL")
+        except (FileNotFoundError, AttributeError):
+            database_url = None
+
     if database_url:
-        # Neon cloud connection
         return create_engine(
             database_url,
             pool_pre_ping=True,
