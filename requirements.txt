@@ -1,0 +1,10 @@
+
+yfinance==0.2.65
+pandas>=2.2
+PyYAML>=6.0
+streamlit>=1.40
+plotly>=5.24
+python-dotenv>=1.0
+SQLAlchemy>=2.0
+psycopg[binary]>=3.2
+confluent-kafka>=2.6
