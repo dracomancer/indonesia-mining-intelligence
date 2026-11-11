@@ -17,6 +17,7 @@ from sqlalchemy import create_engine, URL
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(PROJECT_ROOT.parent / ".env.local", override=False)
 
 st.set_page_config(
     page_title="Indonesia Mining Intelligence",
@@ -383,10 +384,21 @@ st.markdown("""
 # =========================================================
 
 @st.cache_resource
+
 def get_engine():
+    database_url = os.getenv("DATABASE_URL")
 
+    if database_url:
+        # Neon cloud connection
+        return create_engine(
+            database_url,
+            pool_pre_ping=True,
+            pool_recycle=300,
+            connect_args={"sslmode": "require"},
+        )
+
+    # Local Docker PostgreSQL fallback
     required = ["DB_USER", "DB_PASSWORD", "DB_HOST", "DB_NAME"]
-
     missing = [key for key in required if not os.getenv(key)]
 
     if missing:
@@ -404,7 +416,6 @@ def get_engine():
     )
 
     return create_engine(url, pool_pre_ping=True)
-
 
 @st.cache_data(ttl=300)
 def load_performance():
@@ -3168,4 +3179,3 @@ except Exception as error:
         "Check PostgreSQL connection, .env configuration "
         "and dbt models."
     )
-git status

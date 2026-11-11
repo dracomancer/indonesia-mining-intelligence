@@ -47,3 +47,11 @@ docs/*presentation*
 **/docs/final_project_checkpoint.pptx
 # Local backup files
 README_original.md
+.neon
+node_modules/
+.env.local
+mining_market.dump
+db_connection_search.txt
+neon.ts
+package.json
+package-lock.json
