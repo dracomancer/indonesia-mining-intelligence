@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: mining
-    description: "Raw Indonesian mining and global commodity market data"
+    description: "Indonesian mining, global commodity, and macroeconomic market data"
     database: mining_market
     schema: public
     tables:
@@ -14,3 +14,9 @@ sources:
 
       - name: world_bank_commodity_prices
         description: "Historical monthly Nickel and Australian Coal prices from World Bank Pink Sheet"
+
+      - name: jisdor_rates
+        description: "Daily USD/IDR JISDOR exchange rates published by Bank Indonesia"
+
+      - name: bi_policy_rates
+        description: "Historical BI-Rate policy decisions published by Bank Indonesia"

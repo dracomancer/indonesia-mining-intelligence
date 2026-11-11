@@ -5,42 +5,110 @@ market:
   timezone: Asia/Jakarta
 
 stocks:
+  - symbol: ABMM.JK
+    company: ABM Investama
+    sector: Energy
+
   - symbol: ADRO.JK
     company: Alamtri Resources Indonesia
-    sector: Coal
-
-  - symbol: PTBA.JK
-    company: Bukit Asam
-    sector: Coal
-
-  - symbol: ITMG.JK
-    company: Indo Tambangraya Megah
     sector: Coal
 
   - symbol: ANTM.JK
     company: Aneka Tambang
     sector: Nickel and Gold
 
+  - symbol: ARII.JK
+    company: Atlas Resources
+    sector: Coal
+
+  - symbol: BOSS.JK
+    company: Borneo Olah Sarana Sukses
+    sector: Coal
+
+  - symbol: BSSR.JK
+    company: Baramulti Suksessarana
+    sector: Coal
+
+  - symbol: BUMI.JK
+    company: Bumi Resources
+    sector: Coal
+
+  - symbol: BYAN.JK
+    company: Bayan Resources
+    sector: Coal
+
+  - symbol: CITA.JK
+    company: Cita Mineral Investindo
+    sector: Bauxite
+
+  - symbol: DKFT.JK
+    company: Central Omega Resources
+    sector: Nickel
+
+  - symbol: DOID.JK
+    company: Delta Dunia Makmur
+    sector: Mining Services
+
+  - symbol: DSSA.JK
+    company: Dian Swastatika Sentosa
+    sector: Energy
+
+  - symbol: GEMS.JK
+    company: Golden Energy Mines
+    sector: Coal
+
+  - symbol: HRUM.JK
+    company: Harum Energy
+    sector: Coal and Nickel
+
   - symbol: INCO.JK
     company: Vale Indonesia
     sector: Nickel
 
-  - symbol: NCKL.JK
-    company: Trimegah Bangun Persada
-    sector: Nickel
+  - symbol: INDY.JK
+    company: Indika Energy
+    sector: Energy
+
+  - symbol: ITMG.JK
+    company: Indo Tambangraya Megah
+    sector: Coal
+
+  - symbol: MBAP.JK
+    company: Mitrabara Adiperdana
+    sector: Coal
 
   - symbol: MDKA.JK
     company: Merdeka Copper Gold
     sector: Gold and Copper
 
-  - symbol: BRMS.JK
-    company: Bumi Resources Minerals
-    sector: Gold and Copper
+  - symbol: MYOH.JK
+    company: Samindo Resources
+    sector: Mining Services
 
-  - symbol: AMMN.JK
-    company: Amman Mineral Internasional
-    sector: Copper and Gold
+  - symbol: PSAB.JK
+    company: J Resources Asia Pasifik
+    sector: Gold
 
-  - symbol: MEDC.JK
-    company: Medco Energi Internasional
-    sector: Oil and Gas
+  - symbol: PSSI.JK
+    company: Pelita Samudera Shipping
+    sector: Mining Logistics
+
+  - symbol: PTBA.JK
+    company: Bukit Asam
+    sector: Coal
+
+  - symbol: SGER.JK
+    company: Sumber Global Energy
+    sector: Coal
+
+  - symbol: SURE.JK
+    company: Super Energy
+    sector: Energy
+
+  - symbol: TINS.JK
+    company: Timah
+    sector: Tin
+
+  - symbol: UNTR.JK
+    company: United Tractors
+    sector: Mining and Heavy Equipment

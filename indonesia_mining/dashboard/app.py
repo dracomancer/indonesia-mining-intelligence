@@ -602,6 +602,46 @@ def load_all_commodity_history():
 
     return pd.read_sql(query, get_engine())
 
+@st.cache_data(ttl=300)
+def load_jisdor_history():
+
+    query = """
+        SELECT trading_date, currency, nominal, jisdor_rate, buy_rate, sell_rate
+        FROM public.jisdor_rates
+        ORDER BY trading_date
+    """
+
+    return pd.read_sql(query, get_engine())
+
+
+@st.cache_data(ttl=300)
+def load_bi_policy_history():
+
+    query = """
+        SELECT effective_date, policy_rate, source
+        FROM public.bi_policy_rates
+        ORDER BY effective_date
+    """
+
+    return pd.read_sql(query, get_engine())
+
+
+@st.cache_data(ttl=300)
+def load_sensitivity_ranking():
+    ranking_path = (
+        PROJECT_ROOT
+        / "data"
+        / "processed"
+        / "regression"
+        / "sensitivity_ranking.csv"
+    )
+
+    if not ranking_path.exists():
+        return pd.DataFrame()
+
+    return pd.read_csv(ranking_path)
+
+
 # =========================================================
 # HELPER FUNCTIONS
 # =========================================================
@@ -725,6 +765,8 @@ page = st.sidebar.radio(
         "Equity Analysis",
         "Stock Comparison",
         "Commodity Intelligence",
+        "Sensitivity Analysis",
+        "Macro & Monetary Intelligence",
         "Pipeline Information"
     ],
     label_visibility="collapsed"
@@ -755,6 +797,8 @@ try:
     commodity_performance = load_commodity_performance()
     commodity_history_all = load_all_commodity_history()
     world_bank_commodity_performance = load_world_bank_commodity_performance()
+    jisdor_history = load_jisdor_history()
+    bi_policy_history = load_bi_policy_history()
 
         # Calculate annualized volatility
 
@@ -821,7 +865,27 @@ try:
             unsafe_allow_html=True
         )
 
-        st.subheader("Market Overview")
+        col_title, col_date = st.columns([3, 1])
+
+        with col_title:
+            st.subheader("Market Overview")
+
+        with col_date:
+            st.markdown(
+                f"""
+                <div style="
+                    text-align: right;
+                    color: #777780;
+                    font-size: 16px;
+                    font-weight: 600;
+                    padding-top: 12px;
+                    letter-spacing: 0.5px;
+                ">
+                    DATA AS OF · {latest_date.strftime('%d %b %Y').upper()}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
         # ==========================================
         # 1. MARKET OVERVIEW KPI
@@ -2561,7 +2625,485 @@ try:
             st.html(styled_commodity_history.to_html())
 
     # =====================================================
-    # PAGE 5: PIPELINE INFORMATION
+    # PAGE 5: SENSITIVITY ANALYSIS
+    # =====================================================
+
+    elif page == "Sensitivity Analysis":
+
+        st.markdown(
+            '<div class="section-label">MULTIFACTOR EQUITY RESEARCH</div>',
+            unsafe_allow_html=True
+        )
+        st.subheader("Mining Equity Sensitivity Analysis")
+        st.caption(
+            "Statistical relationships between mining equity returns, "
+            "global commodity returns, and USD/IDR movements."
+        )
+
+        sensitivity = load_sensitivity_ranking()
+
+        if sensitivity.empty:
+            st.warning(
+                "Sensitivity ranking file was not found. "
+                "Expected: data/processed/regression/sensitivity_ranking.csv"
+            )
+        else:
+            factor_labels = {
+                "Gold": "gold_return_pct",
+                "Brent": "brent_return_pct",
+                "Copper": "copper_return_pct",
+                "JISDOR (USD/IDR)": "jisdor_return_pct",
+                "BI Rate": "bi_rate_change_bps"
+            }
+
+            factor_label = st.selectbox(
+                "Select External Factor",
+                list(factor_labels.keys()),
+                index=0
+            )
+            selected_factor = factor_labels[factor_label]
+
+            factor_data = sensitivity[
+                sensitivity["variable"] == selected_factor
+            ].copy()
+
+            # Colored KPI cards, consistent with the Macro & Market Overview style.
+            kpis = [
+                ("FDR-SIGNIFICANT", f"{int(sensitivity['fdr_significant'].sum())}",
+                 "Relationships after BH correction",
+                 "linear-gradient(120deg,#1D4ED8,#2563EB 55%,#60A5FA)", "#DBEAFE"),
+                ("ROBUST RELATIONSHIPS", f"{int(sensitivity['robust_significant'].sum())}",
+                 "Same direction, p < 0.05 in robustness sample",
+                 "linear-gradient(120deg,#047857,#059669 55%,#34D399)", "#D1FAE5"),
+                ("FACTORS COVERED", f"{sensitivity['variable'].nunique()}",
+                 "External market and monetary factors",
+                 "linear-gradient(120deg,#6D28D9,#7C3AED 55%,#A78BFA)", "#EDE9FE"),
+            ]
+            kcols = st.columns(3)
+            for col, (label, value, detail, gradient, soft) in zip(kcols, kpis):
+                with col:
+                    st.markdown(textwrap.dedent(f"""
+                        <div style="background:{gradient};padding:20px;border-radius:14px;
+                            min-height:118px;box-shadow:0 5px 16px rgba(0,0,0,.12);
+                            display:flex;flex-direction:column;justify-content:center;gap:8px;">
+                            <div style="color:{soft};font-size:11px;font-weight:700;letter-spacing:1px;">{label}</div>
+                            <div style="color:#FFFFFF;font-size:27px;font-weight:750;line-height:1.15;">{value}</div>
+                            <div style="color:#FFFFFF;font-size:12px;font-weight:600;opacity:.95;">{detail}</div>
+                        </div>
+                    """), unsafe_allow_html=True)
+
+            st.markdown("### Equity Sensitivity Ranking")
+
+            show_robust_only = st.checkbox(
+                "Show only relationships consistent in robustness sample",
+                value=True
+            )
+
+            if show_robust_only and not factor_data.empty:
+                factor_data = factor_data[
+                    factor_data["robust_significant"].astype(bool)
+                ]
+
+            if factor_data.empty:
+                st.info(
+                    f"No qualifying FDR-significant and robust relationships "
+                    f"are available for {factor_label}."
+                )
+            else:
+                factor_data = factor_data.sort_values(
+                    "coefficient",
+                    ascending=True
+                )
+
+                chart_colors = [
+                    "#159A75" if value >= 0 else "#E5484D"
+                    for value in factor_data["coefficient"]
+                ]
+
+                fig = go.Figure(
+                    go.Bar(
+                        x=factor_data["coefficient"],
+                        y=factor_data["symbol"],
+                        orientation="h",
+                        marker_color=chart_colors,
+                        text=[
+                            f"{value:+.3f}"
+                            for value in factor_data["coefficient"]
+                        ],
+                        textposition="outside",
+                        cliponaxis=False,
+                        hovertemplate=(
+                            "<b>%{y}</b><br>"
+                            "Coefficient: %{x:.4f}"
+                            "<extra></extra>"
+                        )
+                    )
+                )
+
+                fig.add_vline(
+                    x=0,
+                    line_dash="dash",
+                    line_color="#64748B"
+                )
+                fig.update_layout(
+                    template="plotly_white",
+                    height=max(380, 35 * len(factor_data) + 100),
+                    paper_bgcolor="#FFFFFF",
+                    plot_bgcolor="#FFFFFF",
+                    xaxis_title="Regression Coefficient",
+                    yaxis_title="Issuer",
+                    showlegend=False,
+                    margin=dict(l=105, r=90, t=35, b=75),
+                    font=dict(
+                        family="Arial, sans-serif",
+                        color="#1F2937",
+                        size=13
+                    ),
+                    xaxis=dict(
+                        title=dict(text="Regression Coefficient", font=dict(color="#111827", size=14)),
+                        tickfont=dict(color="#1F2937", size=12),
+                        showgrid=True,
+                        gridcolor="#CBD5E1",
+                        zeroline=True,
+                        zerolinecolor="#64748B",
+                        showline=True,
+                        linecolor="#64748B",
+                        ticks="outside",
+                        tickcolor="#64748B"
+                    ),
+                    yaxis=dict(
+                        title=dict(text="Issuer", font=dict(color="#111827", size=14)),
+                        tickfont=dict(color="#1F2937", size=12),
+                        showgrid=False,
+                        automargin=True
+                    )
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                display_columns = [
+                    "symbol",
+                    "coefficient",
+                    "q_value",
+                    "short_coefficient",
+                    "short_p_value",
+                    "robust_significant"
+                ]
+                display_data = factor_data[display_columns].copy()
+                display_data.columns = [
+                    "Ticker",
+                    "Full-sample coefficient",
+                    "FDR q-value",
+                    "Robustness coefficient",
+                    "Robustness p-value",
+                    "Robust"
+                ]
+
+                display_data["Robust"] = display_data["Robust"].map(
+                    {True: "Yes", False: "No"}
+                )
+
+                table_format = {
+                    "Full-sample coefficient": "{:+.4f}",
+                    "FDR q-value": "{:.3g}",
+                    "Robustness coefficient": "{:+.4f}",
+                    "Robustness p-value": "{:.3g}"
+                }
+
+                def style_coefficient(value):
+                    if pd.isna(value):
+                        return "color:#64748B;"
+                    if value > 0:
+                        return "color:#047857;font-weight:700;"
+                    if value < 0:
+                        return "color:#DC2626;font-weight:700;"
+                    return "color:#334155;font-weight:600;"
+
+                styled_sensitivity = (
+                    display_data.style
+                    .hide(axis="index")
+                    .format(table_format, na_rep="—")
+                    .map(style_coefficient, subset=[
+                        "Full-sample coefficient", "Robustness coefficient"
+                    ])
+                    .set_properties(**{
+                        "background-color": "#FFFFFF",
+                        "color": "#1F2937",
+                        "font-size": "13px",
+                        "padding": "12px 14px",
+                        "border": "none",
+                        "border-bottom": "1px solid #E5E7EB",
+                        "text-align": "right"
+                    })
+                    .set_table_styles([
+                        {
+                            "selector": "th",
+                            "props": [
+                                ("background-color", "#EFF4FA"),
+                                ("color", "#1E293B"),
+                                ("font-weight", "700"),
+                                ("font-size", "12px"),
+                                ("padding", "13px 14px"),
+                                ("border-bottom", "2px solid #CBD5E1"),
+                                ("text-align", "left"),
+                                ("white-space", "nowrap")
+                            ]
+                        },
+                        {
+                            "selector": "tbody tr:nth-child(even) td",
+                            "props": [("background-color", "#F8FAFC")]
+                        },
+                        {
+                            "selector": "tbody tr:hover td",
+                            "props": [("background-color", "#EAF2FF")]
+                        },
+                        {
+                            "selector": "table",
+                            "props": [
+                                ("width", "100%"),
+                                ("border-collapse", "separate"),
+                                ("border-spacing", "0"),
+                                ("border-radius", "10px"),
+                                ("overflow", "hidden"),
+                                ("border", "1px solid #E2E8F0"),
+                                ("table-layout", "auto")
+                            ]
+                        }
+                    ])
+                    .set_table_attributes('style="width:100%;"')
+                )
+
+                st.html(styled_sensitivity.to_html())
+
+                st.download_button(
+                    "Download displayed ranking (CSV)",
+                    data=display_data.to_csv(index=False).encode("utf-8"),
+                    file_name="mining_equity_sensitivity_ranking.csv",
+                    mime="text/csv"
+                )
+
+            st.markdown("### Methodology")
+            st.caption(
+                "Coefficients are estimated using per-stock OLS models with "
+                "Newey-West HAC standard errors. FDR q-values use the "
+                "Benjamini–Hochberg procedure across 155 factor–issuer tests "
+                "in the full sample. Robustness indicates the coefficient "
+                "keeps the same direction and has p < 0.05 in the sample "
+                "restricted to intervals of no more than three calendar days. "
+                "These are conditional associations, not causal effects or "
+                "investment recommendations."
+            )
+
+    # =====================================================
+    # PAGE 6: MACRO & MONETARY INTELLIGENCE
+    # =====================================================
+
+    elif page == "Macro & Monetary Intelligence":
+
+        st.markdown(
+            '<div class="section-label">MACROECONOMIC & MONETARY MONITORING</div>',
+            unsafe_allow_html=True
+        )
+        st.subheader("Macro & Monetary Intelligence")
+        st.caption(
+            "Monitoring Indonesia's USD/IDR reference exchange rate and "
+            "Bank Indonesia's policy-rate decisions."
+        )
+
+        jisdor = jisdor_history.copy()
+        policy = bi_policy_history.copy()
+        jisdor["trading_date"] = pd.to_datetime(jisdor["trading_date"])
+        policy["effective_date"] = pd.to_datetime(policy["effective_date"])
+        jisdor = jisdor.dropna(subset=["jisdor_rate"]).sort_values("trading_date")
+        policy = policy.dropna(subset=["policy_rate"]).sort_values("effective_date")
+
+        if jisdor.empty or policy.empty:
+            st.warning("JISDOR or BI Rate data is not available in PostgreSQL.")
+        else:
+            latest_fx = jisdor.iloc[-1]
+            previous_fx = jisdor.iloc[-2] if len(jisdor) > 1 else latest_fx
+            fx_change = latest_fx["jisdor_rate"] - previous_fx["jisdor_rate"]
+            fx_change_pct = (
+                fx_change / previous_fx["jisdor_rate"] * 100
+                if previous_fx["jisdor_rate"] else 0
+            )
+            latest_policy = policy.iloc[-1]
+
+            # Colored KPI cards, consistent with the Market Overview page.
+            kpis = [
+                ("LATEST JISDOR", f"Rp {latest_fx['jisdor_rate']:,.2f}",
+                 f"{fx_change:+,.2f} IDR ({fx_change_pct:+.3f}%)", "linear-gradient(120deg,#1D4ED8,#2563EB 55%,#60A5FA)", "#DBEAFE"),
+                ("BI POLICY RATE", f"{latest_policy['policy_rate']:.2f}%",
+                 f"Effective {latest_policy['effective_date']:%d %b %Y}", "linear-gradient(120deg,#6D28D9,#7C3AED 55%,#A78BFA)", "#EDE9FE"),
+                ("JISDOR OBSERVATIONS", f"{len(jisdor):,}",
+                 f"Since {jisdor['trading_date'].min():%d %b %Y}", "linear-gradient(120deg,#047857,#059669 55%,#34D399)", "#D1FAE5"),
+                ("BI RATE DECISIONS", f"{len(policy):,}",
+                 f"Since {policy['effective_date'].min():%d %b %Y}", "linear-gradient(120deg,#B45309,#D97706 55%,#FBBF24)", "#FEF3C7"),
+            ]
+            kcols = st.columns(4)
+            for col, (label, value, detail, gradient, soft) in zip(kcols, kpis):
+                with col:
+                    st.markdown(textwrap.dedent(f"""
+                        <div style="background:{gradient};padding:20px;border-radius:14px;
+                            min-height:118px;box-shadow:0 5px 16px rgba(0,0,0,.12);
+                            display:flex;flex-direction:column;justify-content:center;gap:8px;">
+                            <div style="color:{soft};font-size:11px;font-weight:700;letter-spacing:1px;">{label}</div>
+                            <div style="color:#FFFFFF;font-size:27px;font-weight:750;line-height:1.15;">{value}</div>
+                            <div style="color:#FFFFFF;font-size:12px;font-weight:600;opacity:.95;">{detail}</div>
+                        </div>
+                    """), unsafe_allow_html=True)
+
+            st.markdown("### USD/IDR Reference Rate — JISDOR")
+            period = st.selectbox(
+                "JISDOR display period",
+                ["1 Year", "3 Years", "All Available Data"],
+                index=1,
+                key="macro_jisdor_period"
+            )
+            days = {"1 Year": 365, "3 Years": 1095, "All Available Data": None}[period]
+            fx_plot = jisdor.copy()
+            if days is not None:
+                fx_plot = fx_plot[
+                    fx_plot["trading_date"] >= (
+                        fx_plot["trading_date"].max() - pd.Timedelta(days=days)
+                    )
+                ]
+
+            fx_fig = go.Figure()
+            fx_fig.add_trace(go.Scatter(
+                x=fx_plot["trading_date"],
+                y=fx_plot["jisdor_rate"],
+                mode="lines",
+                name="JISDOR",
+                line=dict(color="#3478F6", width=2),
+                hovertemplate="%{x|%d %b %Y}<br>Rp %{y:,.2f}<extra></extra>"
+            ))
+            fx_fig.update_layout(
+                template="plotly_white",
+                height=390,
+                paper_bgcolor="#FFFFFF",
+                plot_bgcolor="#FFFFFF",
+                yaxis_title="IDR per USD",
+                xaxis_title="",
+                margin=dict(l=20, r=20, t=20, b=20),
+                hovermode="x unified",
+                font=dict(family="Arial", size=12, color="#30343B"),
+                xaxis=dict(
+                    title=dict(font=dict(color="#30343B", size=12)),
+                    tickfont=dict(color="#30343B", size=11),
+                    showgrid=False, zeroline=False, showline=True,
+                    linecolor="#9CA3AF", tickcolor="#6B7280"
+                ),
+                yaxis=dict(
+                    title=dict(font=dict(color="#30343B", size=12)),
+                    tickfont=dict(color="#30343B", size=11),
+                    tickformat=",.0f", separatethousands=True,
+                    gridcolor="#E5E7EB", zeroline=False,
+                    showline=True, linecolor="#9CA3AF"
+                )
+            )
+            st.plotly_chart(fx_fig, use_container_width=True)
+
+            fx_plot["daily_change"] = fx_plot["jisdor_rate"].diff()
+            change_fig = go.Figure(go.Bar(
+                x=fx_plot["trading_date"],
+                y=fx_plot["daily_change"],
+                marker_color=[
+                    "#E5484D" if value > 0 else "#159A75"
+                    for value in fx_plot["daily_change"].fillna(0)
+                ],
+                name="Daily change",
+                hovertemplate="%{x|%d %b %Y}<br>Change: %{y:+,.2f} IDR<extra></extra>"
+            ))
+            change_fig.update_layout(
+                template="plotly_white",
+                height=230,
+                paper_bgcolor="#FFFFFF",
+                plot_bgcolor="#FFFFFF",
+                yaxis_title="Daily change (IDR)",
+                xaxis_title="",
+                margin=dict(l=65, r=25, t=15, b=45),
+                font=dict(family="Arial", size=12, color="#30343B"),
+                xaxis=dict(
+                    tickfont=dict(color="#30343B", size=11),
+                    showgrid=False, zeroline=False, showline=True,
+                    linecolor="#9CA3AF", tickcolor="#6B7280"
+                ),
+                yaxis=dict(
+                    title=dict(font=dict(color="#30343B", size=12)),
+                    tickfont=dict(color="#30343B", size=11),
+                    tickformat="+,.0f", gridcolor="#E5E7EB",
+                    zeroline=True, zerolinecolor="#6B7280",
+                    showline=True, linecolor="#9CA3AF"
+                )
+            )
+            st.plotly_chart(change_fig, use_container_width=True)
+            st.caption(
+                "A positive daily change means the rupiah weakened against the US dollar; "
+                "a negative change means it strengthened. JISDOR is Bank Indonesia's "
+                "USD/IDR reference rate."
+            )
+
+            st.divider()
+            st.markdown("### Bank Indonesia Policy Rate")
+            policy_fig = go.Figure(go.Scatter(
+                x=policy["effective_date"],
+                y=policy["policy_rate"],
+                mode="lines+markers",
+                line=dict(color="#8B5CF6", width=2, shape="hv"),
+                marker=dict(size=5),
+                name="BI Rate",
+                hovertemplate="%{x|%d %b %Y}<br>BI Rate: %{y:.2f}%<extra></extra>"
+            ))
+            policy_fig.update_layout(
+                template="plotly_white",
+                height=340,
+                paper_bgcolor="#FFFFFF",
+                plot_bgcolor="#FFFFFF",
+                yaxis_title="Policy rate (%)",
+                xaxis_title="",
+                margin=dict(l=65, r=25, t=20, b=45),
+                hovermode="x unified",
+                font=dict(family="Arial", size=12, color="#30343B"),
+                xaxis=dict(
+                    tickfont=dict(color="#30343B", size=11),
+                    showgrid=False, zeroline=False, showline=True,
+                    linecolor="#9CA3AF", tickcolor="#6B7280"
+                ),
+                yaxis=dict(
+                    title=dict(font=dict(color="#30343B", size=12)),
+                    tickfont=dict(color="#30343B", size=11),
+                    ticksuffix="%", gridcolor="#E5E7EB",
+                    zeroline=False, showline=True, linecolor="#9CA3AF"
+                )
+            )
+            st.plotly_chart(policy_fig, use_container_width=True)
+
+            policy_display = policy.sort_values(
+                "effective_date", ascending=False
+            ).head(12).copy()
+            policy_display["effective_date"] = policy_display["effective_date"].dt.strftime("%d %b %Y")
+            policy_display.columns = ["Effective Date", "BI Rate (%)", "Source"]
+            st.markdown("#### Latest Policy-Rate Decisions")
+            policy_styled = (
+                style_dark_table(policy_display)
+                .format({"BI Rate (%)": "{:.2f}%"})
+                .set_table_attributes(
+                    'style="width:100%; min-width:100%; table-layout:auto;"'
+                )
+                .hide(axis="index")
+            )
+            st.html(policy_styled.to_html())
+
+            st.markdown("### Data Notes")
+            st.caption(
+                "JISDOR is daily and reflects the USD/IDR reference rate. BI Rate is "
+                "an event-based series: each observation represents an effective policy "
+                "rate from its effective date, not a separate daily observation. "
+                "Sources: Bank Indonesia."
+            )
+
+    # =====================================================
+    # PAGE 7: PIPELINE INFORMATION
     # =====================================================
 
     elif page == "Pipeline Information":
@@ -2587,7 +3129,7 @@ try:
 
         col3.metric(
             "Mart Records",
-            "10"
+            len(performance)
         )
 
         st.markdown("### Data Source")
@@ -2626,3 +3168,4 @@ except Exception as error:
         "Check PostgreSQL connection, .env configuration "
         "and dbt models."
     )
+git status

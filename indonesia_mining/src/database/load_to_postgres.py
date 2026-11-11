@@ -1,10 +1,12 @@
 
 from pathlib import Path
+import os
 
 import pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, URL
-import os
+from sqlalchemy import create_engine, URL, MetaData, Table
+from sqlalchemy.dialects.postgresql import insert
+
 
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -25,8 +27,9 @@ database_url = URL.create(
 
 engine = create_engine(database_url)
 
+
 def load_to_postgres():
-    print("Starting PostgreSQL data loading...")
+    print("Starting PostgreSQL UPSERT...")
 
     # Find latest processed Parquet file
     files = sorted(PROCESSED_PATH.rglob("market_data.parquet"))
@@ -37,35 +40,96 @@ def load_to_postgres():
     source_file = files[-1]
     print(f"Source: {source_file}")
 
-    # Read Parquet
     df = pd.read_parquet(source_file)
 
-    # Convert trading_date to datetime for PostgreSQL
-    df["trading_date"] = pd.to_datetime(df["trading_date"])
+    required_columns = [
+        "symbol", "trading_date", "Date",
+        "Open", "High", "Low", "Close",
+        "Adj Close", "Volume", "Dividends",
+        "Stock Splits", "source", "ingested_at",
+        "daily_return_pct", "intraday_range_pct",
+        "turnover_idr", "market", "exchange", "currency",
+    ]
 
-    print(f"Records to load: {len(df)}")
+    missing = set(required_columns) - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
 
-    # Load data into PostgreSQL
-    df.to_sql(
-        name="stock_prices",
-        con=engine,
-        if_exists="replace",
-        index=False,
-        chunksize=1000,
-        method="multi",
+    df["trading_date"] = pd.to_datetime(df["trading_date"]).dt.date
+
+    # Remove duplicate keys inside the incoming batch
+    df = df.drop_duplicates(
+        subset=["symbol", "trading_date"],
+        keep="last",
     )
 
-    print("\nPOSTGRESQL LOADING SUMMARY")
-    print(f"Records loaded: {len(df)}")
-    print("Table: stock_prices")
+    records = df[required_columns].to_dict(orient="records")
+
+    metadata = MetaData()
+    stock_table = Table(
+        "stock_prices",
+        metadata,
+        schema="public",
+        autoload_with=engine,
+    )
+
+    table_columns = {column.name for column in stock_table.columns}
+    unknown_columns = set(required_columns) - table_columns
+
+    if unknown_columns:
+        raise ValueError(
+            f"Columns missing from PostgreSQL table: {sorted(unknown_columns)}"
+        )
+
+    update_columns = {
+        column: getattr(insert(stock_table).excluded, column)
+        for column in required_columns
+        if column not in ["symbol", "trading_date"]
+    }
+
+    total_affected = 0
+    batch_size = 1000
+
+    with engine.begin() as connection:
+        for start in range(0, len(records), batch_size):
+            batch = records[start:start + batch_size]
+
+            stmt = insert(stock_table).values(batch)
+
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[
+                    stock_table.c.symbol,
+                    stock_table.c.trading_date,
+                ],
+                set_=update_columns,
+            )
+
+            result = connection.execute(stmt)
+            total_affected += result.rowcount
+
+        total_rows = connection.exec_driver_sql(
+            "SELECT COUNT(*) FROM public.stock_prices"
+        ).scalar_one()
+
+        total_symbols = connection.exec_driver_sql(
+            "SELECT COUNT(DISTINCT symbol) FROM public.stock_prices"
+        ).scalar_one()
+
+        total_rows = connection.exec_driver_sql(
+            "SELECT COUNT(*) FROM public.stock_prices"
+        ).scalar_one()
+
+        total_symbols = connection.exec_driver_sql(
+            "SELECT COUNT(DISTINCT symbol) FROM public.stock_prices"
+        ).scalar_one()
+
+    print("\nPOSTGRESQL UPSERT SUMMARY")
+    print(f"Input records: {len(df)}")
+    print(f"Database rows affected: {total_affected}")
+    print(f"Total database records: {total_rows}")
+    print(f"Total stocks: {total_symbols}")
     print("Status: SUCCESS")
 
-    # Verify database record count
-    with engine.connect() as connection:
-        result = connection.exec_driver_sql(
-            "SELECT COUNT(*) FROM stock_prices"
-        )
-        print(f"Database records: {result.scalar()}")
 
 if __name__ == "__main__":
     try:

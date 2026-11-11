@@ -17,6 +17,9 @@ def transform_market_data():
     source_file = files[-1]
     df = pd.read_parquet(source_file)
 
+    # Remove unused Yahoo Finance field
+    df = df.drop(columns=["Capital Gains"], errors="ignore")
+
     print("Starting data transformation...")
 
     # 1. Convert and sort dates
